@@ -10,7 +10,7 @@ y <- as.vector(ts(y[-length(y)]))
 ```
 
 ### Globally Constant Linear Trend Model with Seasonal Indicators
-$$z_{t}$$
+$$z_{t}=\beta_{0}+\beta_{1}t+$$
 ```
 ## construct design matrix for Global Constant Linear Trend Model with Seasonal Indicators 
 x <- matrix(data=NA, nrow=276, ncol=13)
