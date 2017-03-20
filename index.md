@@ -22,7 +22,7 @@ y <- as.vector(ts(y[-length(y)]))
 
 ### Globally Constant Linear Trend Model with Seasonal Indicators
 Since we are given monthly data, the number of seasons s=12. The globally constant linear trend with seasonal indicators thus looks like
-$$z_{t}=\beta_0+\beta_1t+\sum_{i-1}^{11}\delta_i IND_{ti} + \varepsilon_t$$. We now fit our data to this model to estimate the coefficients. We take the first 168 data points as the training set.
+ $$z_{t}=\beta_0+\beta_1t+\sum_{i=1}^{11}\delta_i IND_{ti} + \varepsilon_t$$. We now fit our data to this model to estimate the coefficients. We take the first 168 data points as the training set.
 
 ```
 ## construct design matrix for Global Constant Linear Trend Model with Seasonal Indicators 
@@ -99,7 +99,8 @@ MSE <- mean(sum(res^2))
 
 The fitted residual has strong correlations at some of the small lags, this suggests us to try other models such as the auto-regressive models. The prediction MSE will be compared to that of other models, for end results, jump to "Conclusion".
 
-### Globally Constant Linear Trend Model with Seasonal Indicators
+### Globally Constant Linear Trend Model with Sinusoidal Harmonics
+As suggested by the book that in discrete time series, we can consider at most m=s/2 harmonics. Since we take s=12, we have m=6. So the model we propose looks like $$z_{t}=\beta_0+\beta_1t+\sum_{i=1}^{6} \beta_{1i}sin(f_{i}t)+\beta_{2i}cos(f_{i}t) + \varepsilon_t$$
 
 
 
