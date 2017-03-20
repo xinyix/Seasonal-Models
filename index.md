@@ -72,7 +72,8 @@ MSE <- mean(sum(res^2))
 > MSE
 [1] 1264229
 ```
-![original resid dist](https://github.com/xinyix/Exponential-Smoothing/blob/master/GLR_indicator.png?raw=true)
+![original resid dist](https://github.com/xinyix/Seasonal-Models/blob/master/GLR_indicator.png?raw=true)
+
 The fitted residual has strong correlations at some of the small lags, this suggests us to try other models such as the auto-regressive models. The prediction MSE will be compared to that of other models, for end results, jump to "Conclusion".
 
 ### Globally Constant Linear Trend Model with Seasonal Indicators
