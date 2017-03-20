@@ -39,7 +39,7 @@ for (i in 0:22) {
 	x[(1+12*i):(12+12*i), 3:13] <- block 	# i=0, 2, ..., 22
 }
 
-## First few rows of x
+## first few rows of x
 ## > x
 ##       [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8] [,9] [,10] [,11] [,12] [,13]
 ##  [1,]    1    1    1    0    0    0    0    0    0     0     0     0     0
@@ -100,7 +100,67 @@ MSE <- mean(sum(res^2))
 The fitted residual has strong correlations at some of the small lags, this suggests us to try other models such as the auto-regressive models. The prediction MSE will be compared to that of other models, for end results, jump to "Conclusion".
 
 ### Globally Constant Linear Trend Model with Sinusoidal Harmonics
-As suggested by the book that in discrete time series, we can consider at most m=s/2 harmonics. Since we take s=12, we have m=6. So the model we propose looks like $$z_{t}=\beta_0+\beta_1t+\sum_{i=1}^{6} \beta_{1i}sin(f_{i}t)+\beta_{2i}cos(f_{i}t) + \varepsilon_t$$
+As suggested by the book (page 149) that in discrete time series, we can consider at most m=s/2 harmonics. Since we take s=12, we have m=6. So the model we propose looks like $$z_{t}=\beta_0+\beta_1t+\sum_{i=1}^{6} \beta_{1i}sin(f_{i}t)+\beta_{2i}cos(f_{i}t) + \varepsilon_t$$. Again taking the first 168 points as training set
+```
+## construct design matrix
+x <- matrix(data=NA, nrow=276, ncol=14)
+x[, 1] <- rep(1, 276)
+x[, 2] <- 1:276
+
+for (i in 1:276) {
+	for (j in 1:6) {
+		x[i, (2*j+1)] <- sin(pi*j*i/6)
+		x[i, (2*j+2)] <- cos(pi*j*i/6)
+	}
+}
+
+## first few rows of x
+## > x
+##        [,1] [,2]          [,3]          [,4]          [,5] [,6]          [,7]          [,8]          [,9] [,10]         [,11]         #[,12]         [,13] [,14]
+##  [1,]    1    1  5.000000e-01  8.660254e-01  8.660254e-01  0.5  1.000000e+00  6.123234e-17  8.660254e-01  -0.5  5.000000e-01 -8.660254e-01  1.224647e-16    -1
+##  [2,]    1    2  8.660254e-01  5.000000e-01  8.660254e-01 -0.5  1.224647e-16 -1.000000e+00 -8.660254e-01  -0.5 -8.660254e-01  5.000000e-01 -2.449294e-16     1
+##  [3,]    1    3  1.000000e+00  6.123234e-17  1.224647e-16 -1.0 -1.000000e+00 -1.836970e-16 -2.449294e-16   1.0  1.000000e+00  1.194340e-15  3.673940e-16    -1
+##  [4,]    1    4  8.660254e-01 -5.000000e-01 -8.660254e-01 -0.5 -2.449294e-16  1.000000e+00  8.660254e-01  -0.5 -8.660254e-01 -5.000000e-01 -4.898587e-16     1
+##  [5,]    1    5  5.000000e-01 -8.660254e-01 -8.660254e-01  0.5  1.000000e+00  1.194340e-15 -8.660254e-01  -0.5  5.000000e-01  8.660254e-01  2.388680e-15    -1
+##  [6,]    1    6  1.224647e-16 -1.000000e+00 -2.449294e-16  1.0  3.673940e-16 -1.000000e+00 -4.898587e-16   1.0  2.388680e-15 -1.000000e+00 -7.347881e-16     1
+##  [7,]    1    7 -5.000000e-01 -8.660254e-01  8.660254e-01  0.5 -1.000000e+00 -4.286264e-16  8.660254e-01  -0.5 -5.000000e-01  8.660254e-01  8.572528e-16    -1
+##  [8,]    1    8 -8.660254e-01 -5.000000e-01  8.660254e-01 -0.5 -4.898587e-16  1.000000e+00 -8.660254e-01  -0.5  8.660254e-01 -5.000000e-01 -9.797174e-16     1
+##  [9,]    1    9 -1.000000e+00 -1.836970e-16  3.673940e-16 -1.0  1.000000e+00  5.510911e-16 -7.347881e-16   1.0 -1.000000e+00  8.578717e-16  1.102182e-15    -1
+## [10,]    1   10 -8.660254e-01  5.000000e-01 -8.660254e-01 -0.5  2.388680e-15 -1.000000e+00  8.660254e-01  -0.5  8.660254e-01  5.000000e-01 -4.777360e-15     1
+ 
+## build a data frame to host the entire dataset
+df <- data.frame(y, x)
+
+## split data into training and testing set, use the first 168 points as training
+dftrain <- df[1:168, ]
+xtrain <- df[1:168, 2:15]
+ytrain <- y[1:168]
+xtest <- df[-(1:168), 2:15]
+ytest <- y[-(1:168)]
+
+## run ordinary least square regression on training set, predict with testing set
+mylm <- lm(y~.-1, data=dftrain)
+pred <- predict(mylm, newdata=xtest)
+
+par(mfrow=c(1, 2))
+## plot prediction and observation
+plot(169:276, ytest, type="l", col="blue", xlab="Months since Jan 1955", ylab="Monthly Sales (in thousands) of US Cars", main="GLR Trig")
+lines(169:276, pred, type="l", col="red")
+legend("topright", legend=c("Observation", "Prediction"), col=c("blue", "red"), lty=1:2)
+
+## plot acf of fitted residuals
+fit <- predict(mylm)
+res <- ytrain-fit
+acf(res, main="ACF of Fitted Residuals")
+
+## calculate prediction mse
+MSE <- mean(sum(res^2))
+```
+![original resid dist](https://github.com/xinyix/Seasonal-Models/blob/master/GLR_trig.png?raw=true)
+
+The prediction MSE is a bit smaller than using the Globally Constant Linear Trend Model with Seasonal Indicator.
+
+### General Exponential Smoothing for the Locally Constant Linear Trend Model with Seasonal Indicator
 
 
 
