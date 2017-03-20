@@ -237,7 +237,7 @@ acf(y[169:276]-forecasts, main="ACF of Prediction Residuals")
 > MSE
 [1] 28460.58
 ```
-![original resid dist](https://github.com/xinyix/Seasonal-Models/blob/master/winters_nult.png?raw=true)
+![original resid dist](https://github.com/xinyix/Seasonal-Models/blob/master/winters_mult.png?raw=true)
 The MSE is much smaller than the previous models.
 
 ### Conclusion
