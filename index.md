@@ -160,7 +160,7 @@ MSE <- mean(sum(res^2))
 ```
 ![original resid dist](https://github.com/xinyix/Seasonal-Models/blob/master/GLR_trig.png?raw=true)
 
-The prediction MSE is a bit smaller than using the Globally Constant Linear Trend Model with Seasonal Indicator.
+The prediction MSE is a bit smaller than using the Globally Constant Linear Trend Model with Seasonal Indicator. There is still autocorrelation among the first few lags for the residual.
 
 ### General Exponential Smoothing for the Locally Constant Linear Trend Model with Seasonal Indicator
 We apply the method introduced in Section 4.3.1 of the book on our data. The utility functions are defined in the Appendix, these functions include Locally_Constant_Indicator_Model(), Seasonal_Indicator_F(), Seasonal_Indicator_L() and Locally_Constant_Indicator_Optimal()
@@ -185,7 +185,7 @@ acf(mymodel$one_step_errors, main="ACF of Prediction Residuals")
 ```
 ![original resid dist](https://github.com/xinyix/Seasonal-Models/blob/master/LLR_indicator.png?raw=true)
 
-The optimal smoothing constant opt_omega=0.2348485 is chosen so that MSE is minimized. We can see the prediction follows closely to the observations.
+The optimal smoothing constant opt_omega=0.2348485 is chosen so that MSE is minimized. We can see the prediction follows closely to the observations. The autocorrelation of residual is fluctuating around 0 except at one of the lags, however, we can conclude that this is a better model than the previous two.
 
 ### General Exponential Smoothing for the Locally Constant Linear Trend Model with Sinusoidal Harmonics
 ```
@@ -238,10 +238,10 @@ acf(y[169:276]-forecasts, main="ACF of Prediction Residuals")
 [1] 28460.58
 ```
 ![original resid dist](https://github.com/xinyix/Seasonal-Models/blob/master/winters_mult.png?raw=true)
-The MSE is much smaller than the previous models.
+The MSE is much smaller than the previous models, and the autocorrelation of residual fluctuates around zero consistently.
 
 ### Conclusion
-Winter's Multiplicative Seasonal Model does better predictions than the other models. 
+Winter's Multiplicative Seasonal Model is the best choice among other models discussed.
 
 ### Appendix
 Seasonal_Indicator_F(), Seasonal_Indicator_L(), Locally_Constant_Indicator_Model() and Locally_Constant_Indicator_Optimal()
