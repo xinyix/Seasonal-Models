@@ -29,13 +29,10 @@ $$z_{t}=\beta_0+\beta_1t+\sum_{i-1}^{11}\delta_i IND_{ti} + \varepsilon_t$$. We 
 x <- matrix(data=NA, nrow=276, ncol=13)
 
 x[, 1] <- rep(1, 276)
-
 x[, 2] <- 1:276
 
 block <- matrix(NA, nrow=12, ncol=11)
-
 block[1:11, 1:11] <- diag(1, 11, 11)		
-
 block[12, ] <- rep(0, 11)
 
 for (i in 0:22) {
@@ -70,6 +67,17 @@ ytest <- y[-(1:168)]
 ## run ordinary least square regression on training set, predict with testing set
 mylm <- lm(y~., data=dftrain)
 pred <- predict(mylm, newdata=xtest)
+
+## Coefficients: b0, b1, delta1, delta2, ..., delta11
+## > mylm
+
+## Call:
+## lm(formula = y ~ . - 1, data = dftrain)
+
+## Coefficients:
+##        X1         X2         X3         X4         X5         X6         X7         X8         X9        X10        X11        X12        ## X13  
+## 449.6181     2.0201   -84.7787  -102.7274    21.2525    57.0181    55.3551    47.0493     9.6720   -43.4195  -128.7968     0.1831   
+## -45.9085  
 
 par(mfrow=c(1, 2))
 ## plot prediction and observation
