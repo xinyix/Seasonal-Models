@@ -1,16 +1,29 @@
 ## Seasonal Models (U.S. Retail Sales of Passenger Cars)
 
 ## Read Data
+We are given the monthly U.S. retail sales of passenger cars (in thousands) for the period January 1955 to December 1977
 ```
 ## read response data
 y <- read.table("dat.txt", header=F, sep=" ")
 
 ## clean response data 
 y <- as.vector(ts(y[-length(y)]))
+> y
+  [1]  440  477  637  652  661  681  647  659  655  576  509  631  432  448  545  564  560  540  535  568  421  424  404  514  437  439  573  549  556  517  543  492  495
+ [34]  464  409  512  382  334  401  418  424  411  400  371  317  321  335  511  421  425  498  575  584  586  567  534  458  535  429  431  430  494  597  647  647  596
+ [67]  547  525  459  548  543  544  414  375  480  496  544  572  501  471  371  550  558  526  506  473  592  635  644  602  614  540  374  678  638  644  554  498  624
+[100]  759  715  692  709  553  404  715  640  712  612  552  637  812  781  754  724  649  565  659  564  757  667  631  799  896  841  842  834  767  590  746  794  909
+[133]  733  715  913  820  745  809  688  668  565  855  798  726  612  558  736  774  815  855  696  594  615  735  684  673  702  700  851  815  900  872  829  728  663
+[166]  980  864  750  730  726  809  855  901  898  761  655  808  923  797  720  624  686  746  799  811  925  762  639  581  755  539  538  694  749  899  883  889  957
+[199]  819  724  884 1050  958  741  721  814  913  900 1032 1025  905  813  877 1070 1030  848  875  920 1142 1024 1144 1084  960  836  873  977  911  694  679  683  778
+[232]  816  882  811  811  811  726  757  604  508  578  684  670  660  741  770  794  684  726  889  744  701  679  758  947  914  921  956  865  762  792  868  840  807
+[265]  725  811 1084 1027 1054 1118  913  931  829 1014  881  795
 ```
 
 ### Globally Constant Linear Trend Model with Seasonal Indicators
-$$z_{t}=\beta_0+\beta_1t+\sum_{i-1}^{11}\delta_i IND_{ti} + \varepsilon_t$$
+Since we are given monthly data, the number of seasons s=12. The globally constant linear trend with seasonal indicators thus looks like
+$$z_{t}=\beta_0+\beta_1t+\sum_{i-1}^{11}\delta_i IND_{ti} + \varepsilon_t$$. We now fit our data to this model to estimate the coefficients. We take the first 168 data points as the training set.
+
 ```
 ## construct design matrix for Global Constant Linear Trend Model with Seasonal Indicators 
 x <- matrix(data=NA, nrow=276, ncol=13)
@@ -56,12 +69,13 @@ acf(res, main="ACF of Fitted Residuals")
 
 ## calculate prediction mse
 MSE <- mean(sum(res^2))
-
 > MSE
 [1] 1264229
 ```
+![original resid dist](https://github.com/xinyix/Exponential-Smoothing/blob/master/GLR_indicator.png?raw=true)
+The fitted residual has strong correlations at some of the small lags, this suggests us to try other models such as the auto-regressive models. The prediction MSE will be compared to that of other models, for end results, jump to "Conclusion".
 
-
+### Globally Constant Linear Trend Model with Seasonal Indicators
 
 
 
