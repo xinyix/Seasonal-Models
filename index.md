@@ -187,8 +187,28 @@ acf(mymodel$one_step_errors, main="ACF of Prediction Residuals")
 
 The optimal smoothing constant opt_omega=0.2348485 is chosen so that MSE is minimized. We can see the prediction follows closely to the observations.
 
+### General Exponential Smoothing for the Locally Constant Linear Trend Model with Sinusoidal Harmonics
+```
+opt_omega <- Locally_Constant_Trigonometric_Optimal(y, 12, 6, NULL)
+mymodel <- Locally_Constant_Trigonometric_Model(y, 12, 6, opt_omega, NULL)
 
+par(mfrow=c(1, 2))
+## plot prediction and observation
+plot(1:276, y, type="l", col="blue", xlab="Months since Jan 1955", ylab="Monthly Sales (in thousands) of US Cars", main="LLR Trig")
+lines(1:276, mymodel$one_step_predictions, type="l", col="red")
+legend("topright", legend=c("Observation", "Prediction"), col=c("blue", "red"), lty=1:2)
 
+## plot acf of prediction residuals
+acf(mymodel$one_step_errors, main="ACF of Prediction Residuals")
+```
+After execution, we are getting the error
+```
+Error in solve.default(F, f_0) : 
+  system is computationally singular: reciprocal condition number = 9.8206e-29
+```
+which means the matrix F is non-invertible. We proceed to the next method.
+
+###
 
 
 
@@ -201,7 +221,290 @@ The optimal smoothing constant opt_omega=0.2348485 is chosen so that MSE is mini
 
 
 ### Appendix
+Seasonal_Indicator_F(), Seasonal_Indicator_L(), Locally_Constant_Indicator_Model() and Locally_Constant_Indicator_Optimal()
+```
+############################ Indicator F ##############################################
+## See page 159 for this algorithm 
+Seasonal_Indicator_F <- function (s, omega) {
+	n <- 2 + (s - 1)		# number of variables in model
+	F <- matrix(0, n, n)
+	
+	oneOverAlpha <- 1 / (1-omega)
+	F[1, 1] <- oneOverAlpha
+	F[2, 2] <- omega * (1+omega) * oneOverAlpha^3
+	F[1, 2] <- -omega * oneOverAlpha^2
+	F[2, 1] <- F[1, 2]
+	
+	omegaFrac <- 1 / (1-omega^s)
+	
+	for (j in 3:(s+1)) {
+		F[1, j] <- (omega^(s+2-j)) * omegaFrac
+		F[j, 1] <- F[1, j]
+		F[j, j] <- F[1, j]
+	}
+	
+	omegaFrac <- omegaFrac * omegaFrac
+	for (j in 3:(s+1)) {
+		F[2, j] <- -(omega^(s+2-j)) * ((s+2-j)+(j-2)*omega^s) * omegaFrac
+		F[j, 2] <- F[2, j]
+	}
+	
+	return(F)
+}
+############################ Indicator L ##############################################
+## See page 148 for this algorithm
+Seasonal_Indicator_L <- function (k, s) {
+	library(abind)
+	
+	L_11 <- matrix(0, k+1, k+1)
+	for (jj in 1:(k+1)) {
+		for (ii in jj:(k+1)) {
+			L_11[ii, jj] <- 1 / factorial(ii-jj)
+		}
+	}
+	
+	L_21 <- matrix(0, s-1, k+1)
+	L_21[1, 1] <- 1
+	
+	L_22 <- matrix(0, s-1, s-1)
+	for (jj in 1:(s-1)) {
+		L_22[1, jj] <- -1
+	}
+	for (ii in 2:(s-1)) {
+		L_22[ii, ii-1] <- 1
+	}
+	
+	top <- abind(L_11, matrix(0, k+1, s-1), along=2)
+	bottom <- abind(L_21, L_22, along=2)
+	L <- abind(top, bottom, along=1)
+	
+	return(L)	
+}
 
+############################ Indicator Model #########################################
+Locally_Constant_Indicator_Model <- function (Z, s, omega, beta_0) {
+	n <- length(Z)
+	
+	## 1) get initial guess beta_0, if not provided estimate from the entrire data
+	if (is.null(beta_0)) {
+		x <- matrix(data=NA, nrow=276, ncol=2+(s-1))		## 2 linear components
+
+		x[, 1] <- rep(1, 276)
+
+		x[, 2] <- 1:276
+
+		block <- matrix(NA, nrow=12, ncol=11)
+
+		block[1:11, 1:11] <- diag(1, 11, 11)		
+
+		block[12, ] <- rep(0, 11)
+
+		for (i in 0:22) {
+			x[(1+12*i):(12+12*i), 3:13] <- block 	# i=0, 2, ..., 22
+		}
+
+		## build a data frame to host the derived data points
+		df <- data.frame(Z, x)
+
+		mylm <- lm(Z~.-1, data=df)
+		beta_0 <- mylm$coeff
+		beta_0 <- as.matrix(beta_0)
+	}
+	
+	## 2) get F and L matrices
+	F <- Seasonal_Indicator_F(s, omega)
+	k <- 1	# in this problem we only consider linear model
+	L <- Seasonal_Indicator_L(k, s)
+	f_0 <- matrix(0, 2+s-1, 1)
+	f_0[1] <- 1
+	FinvOnf_0 <- solve(F, f_0)
+	f_1 <- as.matrix(df[1, -1])
+	
+	## 3) iterate over the time series (the first point is calculated manually)
+	beta_hats <- matrix(0, 2+s-1, n)
+	z_hat_1 <- matrix(0, n, 1)
+	z_hat_1[1] <- f_1 %*% beta_0
+	beta_hats[, 1] <- t(L) %*% beta_0 + FinvOnf_0 %*% (Z[1] - z_hat_1[1])
+	
+	for (ii in 2:n) {
+		z_hat_1[ii] <- f_1 %*% beta_hats[, ii-1]
+		incr <- FinvOnf_0 %*% (Z[ii]-z_hat_1[ii])
+		beta_hats[, ii] <- t(L) %*% beta_hats[, ii-1] + incr
+	}
+	
+	et <- Z - z_hat_1
+	MSE <- mean(sum(et^2))
+	
+	rs <- list(one_step_predictions=z_hat_1, one_step_errors=et, MSE=MSE)
+	return(rs)
+}
+
+############################ Seasonal Indicator Optimal Omega ###########################
+Locally_Constant_Indicator_Optimal <- function (Z, s, omega_grid) {
+	if (is.null(omega_grid)) {
+		omega_grid <- seq(from=0.1, to=0.99, length.out=100)
+	}
+	
+	MSE_omega <- matrix(0, 1, length(omega_grid))
+	for (ii in 1:length(omega_grid)) {
+		out <- Locally_Constant_Indicator_Model(Z, s, omega_grid[ii], NULL)
+		MSE_omega[ii] <- out$MSE
+	}
+	
+	return(omega_grid[which.min(MSE_omega)])
+}
+```
+
+Seasonal_Trigonometric_F(), Seasonal_Trigonometric_L(), Locally_Constant_Trigonometric_Model() and Locally_Constant_Trigonometric_Optimal()
+```
+############################ Seasonal Trigonometric F #############################################
+## See page 164 for this algorithm 
+Seasonal_Trigonometric_F <- function (s, m, omega) {
+	f <- 2*pi/s
+	
+	F <- matrix(0, 2+2*m, 2+2*m)
+	F[1, 1] <- 1 / (1-omega)
+	F[1, 2] <- -omega / ((1-omega)^2)
+	F[2, 2] <- omega * (1+omega) / ((1-omega)^3)
+	F[2, 1] <- F[1, 2]
+	
+	for (ii in 1:m) {
+		f_ii <- f*ii
+		g_1 <- 1 - 2 * omega * cos(f_ii) + omega^2
+		F[1, 1+2*ii] <- -omega * sin(f_ii) / g_1
+		F[1, 2+2*ii] <- (1-omega*cos(f_ii)) / g_1
+		F[2, 1+2*ii] <- omega * (1-omega^2) * sin(f_ii) / (g_1^2)
+		F[2, 2+2*ii] <- - (omega*(1+omega^2)*cos(f_ii)-2*omega^2) / (g_1^2)
+		
+		F[1+2*ii, 1] <- F[1, 1+2*ii]
+		F[2+2*ii, 1] <- F[1, 2+2*ii]
+		F[1+2*ii, 2] <- F[2, 1+2*ii]
+		F[2+2*ii, 2] <- F[2, 2+2*ii]
+	}
+	
+	for (ii in 1:m) {
+		f_ii <- f * ii
+		for (kk in 1:m) {
+			f_kk <- f * kk
+			g_2 <- 1 - 2 * omega * cos(f_ii-f_kk) + omega^2
+			g_3 <- 1 - 2 * omega * cos(f_ii+f_kk) + omega^2
+			
+			F[1+2*ii, 1+2*kk] <- 0.5 * ((1-omega*cos(f_ii-f_kk))/g_2-(1-omega*cos(f_ii+f_kk))/g_3)
+			F[2+2*ii, 2+2*kk] <- 0.5 * ((1-omega*cos(f_ii-f_kk))/g_2+(1-omega*cos(f_ii+f_kk))/g_3)
+			F[1+2*ii, 2+2*kk] <- -0.5 * (omega*sin(f_ii-f_kk)/g_2+omega*sin(f_ii+f_kk)/g_3)
+			
+			F[1+2*kk, 1+2*ii] <- F[1+2*ii, 1+2*kk]
+			F[2+2*kk, 2+2*ii] <- F[2+2*ii, 2+2*kk]
+			F[2+2*kk, 1+2*ii] <- F[1+2*ii, 2+2*kk]
+		}
+	}
+	
+	return(F)
+}
+
+############################ Seasonal Trigonometric L #############################################
+## See page 153 for this algorithm
+Seasonal_Trigonometric_L <- function (k, s, m) {
+	library(abind)
+	
+	## polynomial portion of L
+	L_1 <- matrix(0, k+1, k+1)
+	for(jj in 1:(k+1)) {
+		for (ii in jj:(k+1)) {
+			L_1[ii, jj] <- 1/factorial(ii-jj)
+		}
+	}
+	
+	## trigonometric portion of L
+	f <- 2*pi/s
+	
+	L_2 <- matrix(0, 2*m, 2*m)
+	for (ii in 0:(m-1)) {
+		iip1 <- ii+1
+		top <- abind(cos(f*iip1), sin(f*iip1), along=2)
+		bottom <- abind(-sin(f*iip1), cos(f*iip1), along=2)
+		L_2i <- abind(top, bottom, along=1)
+		
+		L_2[2*ii+1, 2*ii+1] <- L_2i[1, 1]
+		L_2[2*ii+2, 2*ii+1] <- L_2i[2, 1]
+		L_2[2*ii+1, 2*ii+2] <- L_2i[1, 2]
+		L_2[2*ii+2, 2*ii+2] <- L_2i[2, 2]
+	}
+	
+	top <- abind(L_1, matrix(0, k+1, 2*m), along=2)
+	bottom <- abind(matrix(0, 2*m, k+1), L_2, along=2)
+	L <- abind(top, bottom, along=1)
+	
+	return(L)
+}
+
+############################ Seasonal Trigonometric Model #########################################
+Locally_Constant_Trigonometric_Model <- function (Z, s, m, omega, beta_0) {
+	n <- length(Z)
+	
+	## 1) get initial guess beta_0, if not provided estimate from the entrire data
+	if (is.null(beta_0)) {
+		x <- matrix(data=NA, nrow=276, ncol=2+2*m)
+		x[, 1] <- rep(1, 276)
+		x[, 2] <- 1:276
+
+		for (i in 1:276) {
+			for (j in 1:m) {
+				x[i, (2*j+1)] <- sin(pi*j*i/6)
+				x[i, (2*j+2)] <- cos(pi*j*i/6)
+			}
+		}
+
+		df <- data.frame(Z, x)
+
+		mylm <- lm(Z~.-1, data=df)
+		beta_0 <- mylm$coeff
+		beta_0 <- as.matrix(beta_0)
+	}
+	
+	## 2) get F and L matrices
+	F <- Seasonal_Trigonometric_F(s, m, omega)
+	k <- 1	# in this problem we only consider linear model
+	L <- Seasonal_Trigonometric_L(k, s, m)
+	f_0 <- matrix(0, 2+2*m, 1)
+	f_0[1] <- 1
+	f_0[seq(4, 2+2*m, by=2)] <- 1
+	FinvOnf_0 <- solve(F, f_0)
+	f_1 <- as.matrix(df[1, -1])
+	
+	## 3) iterate over the time series (the first point is calculated manually)
+	beta_hats <- matrix(0, 2+2*m, n)
+	z_hat_1 <- matrix(0, n, 1)
+	z_hat_1[1] <- f_1 %*% beta_0
+	beta_hats[, 1] <- t(L) %*% beta_0 + FinvOnf_0 %*% (Z[1] - z_hat_1[1])
+	
+	for (ii in 2:n) {
+		z_hat_1[ii] <- f_1 %*% beta_hats[, ii-1]
+		incr <- FinvOnf_0 %*% (Z[ii]-z_hat_1[ii])
+		beta_hats[, ii] <- t(L) %*% beta_hats[, ii-1] + incr
+	}
+	
+	et <- Z - z_hat_1
+	MSE <- mean(sum(et^2))
+	
+	rs <- list(one_step_predictions=z_hat_1, one_step_errors=et, MSE=MSE)
+}
+
+############################ Seasonal Trigonometric Optimal Omega #####################################
+Locally_Constant_Trigonometric_Optimal <- function (Z, s, m, omega_grid) {
+	if (is.null(omega_grid)) {
+		omega_grid <- seq(from=0.1, to=0.99, length.out=100)
+	}
+	
+	MSE_omega <- matrix(0, 1, length(omega_grid))
+	for (ii in 1:length(omega_grid)) {
+		out <- Locally_Constant_Trigonometric_Model(Z, s, m, omega_grid[ii], NULL)
+		MSE_omega[ii] <- out$MSE
+	}
+	
+	return(omega_grid[which.min(MSE_omega)])
+}
+```
 
 
 <script type="text/javascript" async
