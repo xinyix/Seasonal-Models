@@ -1,37 +1,86 @@
-## Welcome to GitHub Pages
+## Seasonal Models (U.S. Retail Sales of Passenger Cars)
 
-You can use the [editor on GitHub](https://github.com/xinyix/Seasonal-Models/edit/master/index.md) to maintain and preview the content for your website in Markdown files.
+## Read Data
+```
+## read response data
+y <- read.table("dat.txt", header=F, sep=" ")
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
-
-### Markdown
-
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
-
-```markdown
-Syntax highlighted code block
-
-# Header 1
-## Header 2
-### Header 3
-
-- Bulleted
-- List
-
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
+## clean response data 
+y <- as.vector(ts(y[-length(y)]))
 ```
 
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
+### Globally Constant Linear Trend Model with Seasonal Indicators
+$$z_{t}$$
+```
+## construct design matrix for Global Constant Linear Trend Model with Seasonal Indicators 
+x <- matrix(data=NA, nrow=276, ncol=13)
 
-### Jekyll Themes
+x[, 1] <- rep(1, 276)
 
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/xinyix/Seasonal-Models/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
+x[, 2] <- 1:276
 
-### Support or Contact
+block <- matrix(NA, nrow=12, ncol=11)
 
-Having trouble with Pages? Check out our [documentation](https://help.github.com/categories/github-pages-basics/) or [contact support](https://github.com/contact) and we’ll help you sort it out.
+block[1:11, 1:11] <- diag(1, 11, 11)		
+
+block[12, ] <- rep(0, 11)
+
+for (i in 0:22) {
+	x[(1+12*i):(12+12*i), 3:13] <- block 	# i=0, 2, ..., 22
+}
+
+## build a data frame to host the entire dataset
+df <- data.frame(y, x)
+
+## split data into training and testing set, use the first 168 points as training
+dftrain <- df[1:168, ]
+xtrain <- df[1:168, 2:14]
+ytrain <- y[1:168]
+xtest <- df[-(1:168), 2:14]
+ytest <- y[-(1:168)]
+
+## run ordinary least square regression on training set, predict with testing set
+mylm <- lm(y~., data=dftrain)
+pred <- predict(mylm, newdata=xtest)
+
+par(mfrow=c(1, 2))
+## plot prediction and observation
+plot(169:276, ytest, type="l", col="blue", xlab="Months since Jan 1955", ylab="Monthly Sales (in thousands) of US Cars", main="GLR Indicator")
+lines(169:276, pred, type="l", col="red")
+legend("topright", legend=c("Observation", "Prediction"), col=c("blue", "red"), lty=1:2)
+
+## plot acf of fitted residuals 
+fit <- predict(mylm)
+res <- ytrain-fit
+acf(res, main="ACF of Fitted Residuals")
+
+## calculate prediction mse
+MSE <- mean(sum(res^2))
+
+> MSE
+[1] 1264229
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script type="text/javascript" async
+  src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-MML-AM_CHTML">
+</script>
