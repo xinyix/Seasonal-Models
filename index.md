@@ -201,24 +201,47 @@ legend("topright", legend=c("Observation", "Prediction"), col=c("blue", "red"), 
 ## plot acf of prediction residuals
 acf(mymodel$one_step_errors, main="ACF of Prediction Residuals")
 ```
-After execution, we are getting the error
+After execution, we get the error
 ```
 Error in solve.default(F, f_0) : 
   system is computationally singular: reciprocal condition number = 9.8206e-29
 ```
-which means the matrix F is non-invertible. We proceed to the next method.
+meaning that the matrix F is non-invertible. We proceed to the next method.
 
-###
+### Winter's Multiplicative Seasonal Forecasting Procedure
+We use the hw() function from the "forecast" package
+```
+train <- y[1:168]
+forecasts <- vector(mode="numeric", length=108)
+for (k in 1:108) {
+	hw.obj <- hw(train, h=1, seasonal="multiplicative", initial="simple", alpha=NULL, beta=NULL, gamma=NULL)
+	forecasts[k] <- as.numeric(hw.obj$mean)
+	train <- y[1:(108+k)]
+}
 
+err <- 0
+for (i in 1:108) {
+	err = err + (y[168+i]-forecasts[i])^2
+}
+MSE <- err/108
 
+par(mfrow=c(1, 2))
+## plot prediction and observation
+plot(169:276, y[169:276], type="l", col="blue", xlab="Months since Jan 1955", ylab="Monthly Sales (in thousands) of US Cars", main="Winter's Multiplicative Seasonal Model")
+lines(169:276, forecasts, type="l", col="red")
+legend("topright", legend=c("Observation", "Prediction"), col=c("blue", "red"), lty=1:1)
 
+## plot acf of prediction residuals
+acf(y[169:276]-forecasts, main="ACF of Prediction Residuals")
 
+> MSE
+[1] 28460.58
+```
+![original resid dist](https://github.com/xinyix/Seasonal-Models/blob/master/winters_nult.png?raw=true)
+The MSE is much smaller than the previous models.
 
-
-
-
-
-
+### Conclusion
+Winter's Multiplicative Seasonal Model does better predictions than the other models. 
 
 ### Appendix
 Seasonal_Indicator_F(), Seasonal_Indicator_L(), Locally_Constant_Indicator_Model() and Locally_Constant_Indicator_Optimal()
