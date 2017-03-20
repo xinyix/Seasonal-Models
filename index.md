@@ -116,7 +116,7 @@ for (i in 1:276) {
 
 ## first few rows of x
 ## > x
-##        [,1] [,2]          [,3]          [,4]          [,5] [,6]          [,7]          [,8]          [,9] [,10]         [,11]         #[,12]         [,13] [,14]
+##        [,1] [,2]          [,3]          [,4]          [,5] [,6]          [,7]          [,8]          [,9] [,10]         [,11]         [,12]         [,13] [,14]
 ##  [1,]    1    1  5.000000e-01  8.660254e-01  8.660254e-01  0.5  1.000000e+00  6.123234e-17  8.660254e-01  -0.5  5.000000e-01 -8.660254e-01  1.224647e-16    -1
 ##  [2,]    1    2  8.660254e-01  5.000000e-01  8.660254e-01 -0.5  1.224647e-16 -1.000000e+00 -8.660254e-01  -0.5 -8.660254e-01  5.000000e-01 -2.449294e-16     1
 ##  [3,]    1    3  1.000000e+00  6.123234e-17  1.224647e-16 -1.0 -1.000000e+00 -1.836970e-16 -2.449294e-16   1.0  1.000000e+00  1.194340e-15  3.673940e-16    -1
@@ -155,12 +155,37 @@ acf(res, main="ACF of Fitted Residuals")
 
 ## calculate prediction mse
 MSE <- mean(sum(res^2))
+> MSE
+[1] 1262280
 ```
 ![original resid dist](https://github.com/xinyix/Seasonal-Models/blob/master/GLR_trig.png?raw=true)
 
 The prediction MSE is a bit smaller than using the Globally Constant Linear Trend Model with Seasonal Indicator.
 
 ### General Exponential Smoothing for the Locally Constant Linear Trend Model with Seasonal Indicator
+We apply the method introduced in Section 4.3.1 of the book on our data. The utility functions are defined in the Appendix, these functions include Locally_Constant_Indicator_Model(), Seasonal_Indicator_F(), Seasonal_Indicator_L() and Locally_Constant_Indicator_Optimal()
+```
+opt_omega <- Locally_Constant_Indicator_Optimal(y, 12, NULL)
+> opt_omega
+[1] 0.2348485
+
+mymodel <- Locally_Constant_Indicator_Model(y, 12, opt_omega, NULL)
+
+par(mfrow=c(1, 2))
+## plot prediction and observation
+plot(1:276, y, type="l", col="blue", xlab="Months since Jan 1955", ylab="Monthly Sales (in thousands) of US Cars", main="LLR Indicator")
+lines(1:276, mymodel$one_step_predictions, type="l", col="red")
+legend("topright", legend=c("Observation", "Prediction"), col=c("blue", "red"), lty=1:2)
+
+## plot acf of prediction residuals
+acf(mymodel$one_step_errors, main="ACF of Prediction Residuals")
+
+> mymodel$MSE
+[1] 1753289
+```
+![original resid dist](https://github.com/xinyix/Seasonal-Models/blob/master/LLR_indicator.png?raw=true)
+
+The optimal smoothing constant opt_omega=0.2348485 is chosen so that MSE is minimized. We can see the prediction follows closely to the observations.
 
 
 
@@ -175,8 +200,7 @@ The prediction MSE is a bit smaller than using the Globally Constant Linear Tren
 
 
 
-
-
+### Appendix
 
 
 
