@@ -100,7 +100,7 @@ MSE <- mean(sum(res^2))
 The fitted residual has strong correlations at some of the small lags, this suggests us to try other models such as the auto-regressive models. The prediction MSE will be compared to that of other models, for end results, jump to "Conclusion".
 
 ### Globally Constant Linear Trend Model with Sinusoidal Harmonics
-As suggested by the book (page 149) that in discrete time series, we can consider at most m=s/2 harmonics. Since we take s=12, we have m=6. So the model we propose looks like $$z_{t}=\beta_0+\beta_1t+\sum_{i=1}^{6} \beta_{1i}sin(f_{i}t)+\beta_{2i}cos(f_{i}t) + \varepsilon_t$$. Again taking the first 168 points as training set
+As suggested by the book (page 149) that in discrete time series, we can consider at most m=s/2 harmonics. Since s=12, we take m=6. So the model we propose looks like $$z_{t}=\beta_0+\beta_1t+\sum_{i=1}^{6} \beta_{1i}sin(f_{i}t)+\beta_{2i}cos(f_{i}t) + \varepsilon_t$$. Again taking the first 168 points as training set
 ```
 ## construct design matrix
 x <- matrix(data=NA, nrow=276, ncol=14)
